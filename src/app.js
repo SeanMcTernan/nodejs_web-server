@@ -2,6 +2,9 @@ const path = require('path')
 const express = require('express')
 const hbs = require('hbs')
 
+const geoCode = require('./utils/geocode')
+const forecast = require('./utils/forecast')
+
 const app = express()
 //Define paths for express config
 const publicDirectoryPath = path.join(__dirname, '../public')
@@ -42,9 +45,50 @@ app.get('/help', (req, res) => {
 
 
 app.get('/weather', (req, res) => {
+    const address = req.query.address
+    
+if (address) {
+    geoCode(address, (error, { latitude, longitude, location } = {}) => {
+            if (error) {
+             return res.send({ error })
+            }
+    forecast(latitude, longitude, (error, forecastData) => {
+                if (error) {
+                 return  res.send({ error })
+                }
+    
+                res.send(
+                    {   
+                        forecast: forecastData,
+                        location,
+                        address
+                    }
+                )
+              })
+            })
+    }
+    else {
+        res.send(
+        {
+            error: 'You must provide an address.'
+        }
+    )
+    }
+    }) 
+
+
+app.get('/products', (req, res) => {
+    if (!req.query.search) {
+        return res.send(
+            {
+                error: 'You must provide a search term'
+            }
+        )
+    }
+
+    console.log(req.query.search)
     res.send({
-        forecast: "It's 50 degrees",
-        location: 'Fernie'
+        products: [],
     })
 })
 
@@ -69,3 +113,10 @@ app.get('*', (req, res) => {
 app.listen(3000, () => {
     console.log('Server is up on port 3000!')
 })  
+
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    next();
+  }); 
